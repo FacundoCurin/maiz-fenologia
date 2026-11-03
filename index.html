@@ -602,6 +602,8 @@ const ONI_NDJ={1991:1.2,1992:0.3,1993:0.3,1994:1.0,1995:-0.8,1996:-0.4,1997:2.4,
 function ensoPhaseOf(y){const v=ONI_NDJ[y]; if(v===undefined)return null; return v>=0.5?"nino":(v<=-0.5?"nina":"neutral");}
 
 const $=id=>document.getElementById(id);
+// Siembra por defecto ~30 días atrás, para que arranque con tramo observado + estimación.
+(function(){const d=new Date(Date.now()-30*864e5);$("sow").value=d.toISOString().slice(0,10);})();
 function params(){
   return {p1:+$("p1").value,phint:+$("phint").value,p2:+$("p2").value,p2o:+$("p2o").value,
           tbase:+$("tbase").value,topt:+$("topt").value,djti:+$("djti").value,pemrg:+$("pemrg").value};
@@ -759,7 +761,8 @@ $("form").addEventListener("submit",async(ev)=>{
     const sowStr=`${sd}/${sm}/${sy}`;
     const anomStr=anom!=null?` La ventana se estima <b>${anom>0?"+":""}${anom.toFixed(1)} °C</b> vs la climatología.`:"";
     const methodStr=method==="cfs"?"pronóstico CFSv2":`análogo ${PHN[phase]}`;
-    setStatus(`Campaña ${sowStr} en <b>${$("loc").value||"el sitio"}</b> (${methodStr}, observado ${covPct}% del ciclo): <b>${central.TLNO.toFixed(1)} hojas</b> y floración el <b>${fechaStr(floDate)}</b> (${central.floD} días).`+anomStr);
+    const covHint = covPct===0 ? ` <b>La siembra es a futuro</b>, así que todo el ciclo es estimado; elegí una fecha de siembra ya transcurrida para usar el dato observado hasta hoy y estimar solo el resto.` : "";
+    setStatus(`Campaña ${sowStr} en <b>${$("loc").value||"el sitio"}</b> (${methodStr}, observado ${covPct}% del ciclo): <b>${central.TLNO.toFixed(1)} hojas</b> y floración el <b>${fechaStr(floDate)}</b> (${central.floD} días).`+anomStr+covHint);
   }catch(err){
     setStatus("No se pudo calcular: "+err.message,true);
   }finally{
