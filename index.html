@@ -150,6 +150,13 @@
           <label for="mad">Madurez</label>
           <select id="mad">
             <option value="120">Corto (P1≈120)</option>
+            <option value="180">MR100 (P1≈180)</option>
+            <option value="195">MR105 (P1≈195)</option>
+            <option value="210">MR110 (P1≈210)</option>
+            <option value="255">MR115 (P1≈255)</option>
+            <option value="240">MR120 (P1≈240)</option>
+            <option value="255">MR125 (P1≈255)</option>
+            <option value="270">MR130 (P1≈270)</option>
             <option value="200" selected>Medio (P1≈200)</option>
             <option value="300">Largo (P1≈300)</option>
             <option value="custom">Personalizado</option>
@@ -177,6 +184,10 @@
           <div class="field"><label for="djti">DJTI (días)</label><input type="number" id="djti" value="4" step="0.5"></div>
           <div class="field"><label for="pemrg">Siembra→emerg. (°Cd)</label><input type="number" id="pemrg" value="60" step="5"></div>
           <div class="field"><label for="nyears">Años climatología</label><input type="number" id="nyears" value="20" step="1" min="5" max="40"></div>
+          <div class="field"><label for="p5base0">°Cd R1→R6 (base 0)</label><input type="number" id="p5base0" value="1300" step="25"></div>
+          <div class="field"><label for="kmpm">Humedad a MF (%)</label><input type="number" id="kmpm" value="35" step="0.5"></div>
+          <div class="field"><label for="target">Humedad cosecha (%)</label><input type="number" id="target" value="14.5" step="0.5"></div>
+          <div class="field"><label for="kmethod">Coef. secado k</label><select id="kmethod"><option value="kpre" selected>kpre (Chazarreta)</option><option value="const">constante 0,062</option></select></div>
         </div>
       </details>
 
@@ -196,6 +207,13 @@
           <div class="kpi soil"><div class="lab">Días a floración</div><div class="big" id="k_days">–</div><div class="rng" id="k_days_r"></div></div>
           <div class="kpi cool"><div class="lab">°Cd a floración</div><div class="big" id="k_gdd">–</div><div class="rng" id="k_gdd_r"></div></div>
         </div>
+        <div class="kpis" style="margin-bottom:8px">
+          <div class="kpi soil"><div class="lab">Madurez fisiológica</div><div class="big" id="k_pm">–</div><div class="rng" id="k_pm_r"></div></div>
+          <div class="kpi crop"><div class="lab">Cosecha (humedad obj.)</div><div class="big" id="k_harv">–</div><div class="rng" id="k_harv_r"></div></div>
+          <div class="kpi maize"><div class="lab">Días de llenado</div><div class="big" id="k_fill">–</div><div class="rng" id="k_fill_r"></div></div>
+          <div class="kpi cool"><div class="lab">Días de secado</div><div class="big" id="k_dry">–</div><div class="rng" id="k_dry_r"></div></div>
+        </div>
+        <p class="cap" id="fill_cond" style="margin:0 0 20px"></p>
 
         <div class="card chart" style="margin-bottom:20px">
           <h3>Aparición de hojas y etapas (campaña)</h3>
@@ -217,6 +235,17 @@
             <span><span class="swatch" style="background:var(--danger)"></span>Tmáx</span>
             <span><span class="swatch" style="background:var(--cool)"></span>Tmín</span>
             <span>Sólido = observado · cortado = estimación</span>
+          </div>
+        </div>
+
+        <div class="card chart" style="margin-bottom:20px">
+          <h3>Secado del grano (humedad %)</h3>
+          <p class="cap">Desde madurez fisiológica (~humedad a MF) hasta la humedad objetivo de cosecha, con el modelo de dry-down de Chazarreta (2023). Sólido = observado, cortado = estimado; la línea punteada tenue es la humedad de equilibrio (Me).</p>
+          <div id="chart_dry"></div>
+          <div class="legend">
+            <span><span class="swatch" style="background:var(--danger)"></span>Humedad del grano</span>
+            <span><span class="swatch" style="background:var(--crop)"></span>Objetivo de cosecha</span>
+            <span><span class="swatch" style="background:var(--cool)"></span>Me (equilibrio)</span>
           </div>
         </div>
 
@@ -245,6 +274,8 @@
             <li><b>Datos de la campaña en curso:</b> los días ya transcurridos usan el dato observado de este año (NASA POWER, celda ~0,5°, con ~1 semana de atraso). Los días futuros se estiman con el método elegido.</li>
             <li><b>Pronóstico estacional (CFSv2):</b> pronóstico de Open-Meteo (modelo NOAA CFSv2, ~6 meses, 50 miembros). La dispersión del ensamble es el rango; la radiación se toma de la climatología (CFSv2 no la entrega).</li>
             <li><b>Análogo ENSO:</b> para los días futuros promedia solo los años históricos de la fase elegida (Niño/Niña/Neutral), clasificados por el ONI NDJ (NOAA CPC, umbral ±0,5 °C; tabla embebida, no en vivo). Cada año análogo da un punto del rango, y la línea cortada del gráfico de temperatura es el promedio de la fase.</li>
+            <li><b>Llenado R1→R6:</b> tiempo térmico con <b>base 0 °C</b> desde floración hasta madurez fisiológica (°Cd calibrable). Resume T, radiación y VPD del período de llenado.</li>
+            <li><b>Secado post-madurez:</b> modelo de <b>Chazarreta et al. (2023)</b>: la humedad del grano decae hacia la humedad de equilibrio Me (Henderson) con el coeficiente kpre (función de radiación y VPD del llenado); la cosecha es a la humedad objetivo. No considera rasgos del híbrido (pericarpio, chalas, etc.).</li>
             <li><b>No</b> incluye estrés hídrico ni de nitrógeno, que en condiciones reales pueden adelantar o atrasar el desarrollo.</li>
           </ul>
           <p class="srcline" id="srcline"></p>
@@ -357,16 +388,16 @@ async function fetchPower(lat,lon,nYears){
   const end=new Date(now.getTime()-7*864e5); // margen de disponibilidad
   const startY=end.getUTCFullYear()-nYears;
   const s=`${startY}0101`, e=fmt(end);
-  const url=`https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M_MAX,T2M_MIN,ALLSKY_SFC_SW_DWN&community=AG&longitude=${lon}&latitude=${lat}&start=${s}&end=${e}&format=JSON`;
+  const url=`https://power.larc.nasa.gov/api/temporal/daily/point?parameters=T2M_MAX,T2M_MIN,ALLSKY_SFC_SW_DWN,RH2M&community=AG&longitude=${lon}&latitude=${lat}&start=${s}&end=${e}&format=JSON`;
   const r=await fetch(url);
   if(!r.ok) throw new Error("NASA POWER respondió "+r.status);
   const j=await r.json();
   const P=j.properties.parameter;
-  const obs={}; // YYYYMMDD(string) -> {tmax,tmin,srad}
+  const obs={}; // YYYYMMDD(string) -> {tmax,tmin,srad,rh}
   for(const k in P.T2M_MAX){
-    const tmax=P.T2M_MAX[k], tmin=P.T2M_MIN[k], srad=P.ALLSKY_SFC_SW_DWN[k];
+    const tmax=P.T2M_MAX[k], tmin=P.T2M_MIN[k], srad=P.ALLSKY_SFC_SW_DWN[k], rh=(P.RH2M?P.RH2M[k]:MISS);
     if(tmax===MISS||tmin===MISS) continue;
-    obs[k]={tmax,tmin,srad:(srad===MISS?15:srad)};
+    obs[k]={tmax,tmin,srad:(srad===MISS?15:srad),rh:(rh===MISS?70:rh)};
   }
   return {obs, startY, endY:end.getUTCFullYear(), coords:j.geometry?j.geometry.coordinates:[lon,lat]};
 }
@@ -401,11 +432,11 @@ function climatology(obs){
   for(const k in obs){
     const m=k.slice(4,6), day=k.slice(6,8), key=m+day;
     const o=obs[k];
-    if(!acc[key]) acc[key]={tmax:0,tmin:0,srad:0,n:0};
-    acc[key].tmax+=o.tmax; acc[key].tmin+=o.tmin; acc[key].srad+=o.srad; acc[key].n++;
+    if(!acc[key]) acc[key]={tmax:0,tmin:0,srad:0,rh:0,n:0};
+    acc[key].tmax+=o.tmax; acc[key].tmin+=o.tmin; acc[key].srad+=o.srad; acc[key].rh+=(o.rh==null?70:o.rh); acc[key].n++;
   }
   const clim={};
-  for(const key in acc){const a=acc[key];clim[key]={tmax:a.tmax/a.n,tmin:a.tmin/a.n,srad:a.srad/a.n};}
+  for(const key in acc){const a=acc[key];clim[key]={tmax:a.tmax/a.n,tmin:a.tmin/a.n,srad:a.srad/a.n,rh:a.rh/a.n};}
   return clim;
 }
 
@@ -417,7 +448,7 @@ function buildSeries(start,nDays,source,lat){
     const src=source(d);
     if(!src) continue;
     const dl=daylengths(lat,doyOf(d));
-    out.push({date:d,doy:doyOf(d),tmax:src.tmax,tmin:src.tmin,srad:src.srad,dayl:dl.dayl,twilen:dl.twilen});
+    out.push({date:d,doy:doyOf(d),tmax:src.tmax,tmin:src.tmin,srad:src.srad,rh:(src.rh==null?70:src.rh),dayl:dl.dayl,twilen:dl.twilen});
   }
   return out;
 }
@@ -590,6 +621,86 @@ function chartCampaign(host, tr, bIdx, estLabel){
   host.appendChild(svg);
 }
 
+/* ===================== LLENADO Y SECADO (Chazarreta 2023) ===================== */
+function vps(t){return 0.611*Math.exp(17.27*t/(t+237.3));}      // presión de vapor saturado (kPa)
+function vpdOf(t,rh){return vps(t)*(1-Math.min(rh,100)/100);}   // VPD (kPa)
+// Humedad de equilibrio Me (base húmeda, %). Henderson con params de maíz (Thompson 1968).
+function meWet(t,rh){
+  const a=0.0001557,b=45.5,c=2;
+  const num=Math.log(1-Math.min(Math.max(rh,1),99.5)/100);
+  const md=Math.pow(num/(-a*(t+b)),1/c)/100;                    // fracción base seca
+  return 100*md/(1+md);                                         // -> base húmeda %
+}
+// Llenado R1->R6 (tiempo térmico base 0) y secado post-madurez (Henderson-Perry, k de Chazarreta).
+// ser: serie con {tmax,tmin,srad,rh,observed}. floD: índice de floración. pr: {p5base0,kmpm,target,kmethod}
+function fillingDrydown(ser, floD, warm, pr){
+  const n=ser.length;
+  let g0=0, pmIdx=null;
+  for(let i=floD;i<n;i++){const w=ser[i];const tm=(w.tmax+warm+w.tmin+warm)/2;g0+=Math.max(0,tm);
+    if(g0>=pr.p5base0){pmIdx=i;break;}}
+  if(pmIdx===null) return {pmIdx:null};
+  // condiciones del llenado [floD..pmIdx]
+  let sT=0,sSR=0,sVPD=0,cnt=0;
+  for(let i=floD;i<=pmIdx;i++){const w=ser[i];const tm=(w.tmax+warm+w.tmin+warm)/2;
+    sT+=tm;sSR+=w.srad;sVPD+=vpdOf(tm,w.rh);cnt++;}
+  const fillT=sT/cnt, fillSR=sSR/cnt, fillVPD=sVPD/cnt, fillDays=pmIdx-floD;
+  // coeficiente de secado k
+  let k = pr.kmethod==='const' ? 0.062 : (-0.03806 + 0.002838*fillSR + 0.023579*fillVPD); // kpre
+  k=Math.max(k,0.005);
+  // secado diario desde madurez fisiológica
+  const kmTrace=[{i:pmIdx,x:0,km:pr.kmpm,me:null,observed:ser[pmIdx].observed}];
+  let KM=pr.kmpm; const meH=[]; let harvestIdx=null;
+  for(let i=pmIdx+1;i<n;i++){const w=ser[i];const tm=(w.tmax+warm+w.tmin+warm)/2;
+    meH.push(meWet(tm,w.rh));
+    const me3=meH.slice(-3).reduce((a,b)=>a+b,0)/Math.min(meH.length,3);
+    KM=KM-k*(KM-me3); if(KM<me3)KM=me3;
+    kmTrace.push({i,x:i-pmIdx,km:KM,me:me3,observed:ser[i].observed});
+    if(harvestIdx===null && KM<=pr.target){harvestIdx=i;break;}}
+  return {pmIdx,fillT,fillSR,fillVPD,fillDays,k,kmTrace,harvestIdx,
+          dryDays: harvestIdx!==null ? harvestIdx-pmIdx : null};
+}
+
+// Gráfico de secado del grano: humedad (%) desde madurez fisiológica; sólido=observado, cortado=estimado.
+function chartDrydown(host, tr, target){
+  host.innerHTML="";
+  if(!tr||tr.length<2){host.innerHTML='<p class="cap">No se alcanzó la madurez/secado dentro del horizonte.</p>';return;}
+  const n=tr.length,W=700,H=280,m={l:42,r:16,t:16,b:40};
+  const svg=el("svg",{viewBox:`0 0 ${W} ${H}`});
+  const kms=tr.map(d=>d.km), mes=tr.map(d=>d.me).filter(v=>v!=null);
+  const ymax=Math.max(...kms)+2, ymin=Math.max(0,Math.min(target,...(mes.length?mes:[target]),...kms)-2);
+  const xmax=tr[n-1].x||1;
+  const X=i=>m.l+(tr[i].x/xmax)*(W-m.l-m.r);
+  const Y=v=>H-m.b-((v-ymin)/(ymax-ymin))*(H-m.t-m.b);
+  svg.appendChild(el("line",{x1:m.l,y1:H-m.b,x2:W-m.r,y2:H-m.b,stroke:css('--line')}));
+  for(let v=Math.ceil(ymin/5)*5; v<=ymax; v+=5){const y=Y(v);
+    svg.appendChild(el("line",{x1:m.l,y1:y,x2:W-m.r,y2:y,stroke:css('--line'),"stroke-dasharray":"2 4",opacity:.6}));
+    const t=el("text",{x:m.l-6,y:y+4,"text-anchor":"end","font-size":11,fill:css('--muted')});t.textContent=v;svg.appendChild(t);}
+  const step=Math.max(5,Math.round(xmax/8/5)*5);
+  for(let x=0;x<=xmax;x+=step){const xi=m.l+(x/xmax)*(W-m.l-m.r);
+    const t=el("text",{x:xi,y:H-m.b+18,"text-anchor":"middle","font-size":11,fill:css('--muted')});t.textContent=x;svg.appendChild(t);}
+  const tx=el("text",{x:(m.l+W-m.r)/2,y:H-4,"text-anchor":"middle","font-size":11.5,fill:css('--muted')});
+  tx.textContent="días desde madurez fisiológica";svg.appendChild(tx);
+  // objetivo de cosecha
+  svg.appendChild(el("line",{x1:m.l,y1:Y(target),x2:W-m.r,y2:Y(target),stroke:css('--crop'),"stroke-dasharray":"5 4",opacity:.8}));
+  const tg=el("text",{x:W-m.r,y:Y(target)-5,"text-anchor":"end","font-size":11,fill:css('--crop'),"font-weight":600});
+  tg.textContent="cosecha "+target+"%";svg.appendChild(tg);
+  // Me (tenue)
+  let pMe="";let started=false;
+  tr.forEach((d,i)=>{if(d.me==null)return;pMe+=(started?"L":"M")+X(i).toFixed(1)+" "+Y(d.me).toFixed(1)+" ";started=true;});
+  if(pMe) svg.appendChild(el("path",{d:pMe,fill:"none",stroke:css('--cool'),"stroke-width":1.2,opacity:.5,"stroke-dasharray":"1 3"}));
+  // humedad: observado sólido / estimado cortado
+  let bIdx=tr.findIndex(d=>!d.observed); if(bIdx<0)bIdx=n;
+  function seg(from,to,dash){let pp="";for(let i=from;i<=to;i++){if(i<0||i>=n)continue;pp+=(i===from?"M":"L")+X(i).toFixed(1)+" "+Y(tr[i].km).toFixed(1)+" ";}
+    const a={d:pp,fill:"none",stroke:css('--danger'),"stroke-width":2.4}; if(dash)a["stroke-dasharray"]="5 3"; svg.appendChild(el("path",a));}
+  if(bIdx>0) seg(0,Math.min(bIdx-1,n-1),false);
+  if(bIdx<n) seg(Math.max(bIdx-1,0),n-1,true);
+  // marcador de cosecha
+  const last=tr[n-1];
+  if(last.km<=target+0.1){const x=X(n-1);
+    svg.appendChild(el("circle",{cx:x,cy:Y(last.km),r:4,fill:css('--danger'),stroke:css('--panel'),"stroke-width":1.5}));}
+  host.appendChild(svg);
+}
+
 /* ===================== ORQUESTACIÓN ===================== */
 let CACHE=null; // {lat,lon,nYears,obs,clim}
 let SEASONAL=null; // {lat,lon,mean,members,start,end,period}
@@ -606,7 +717,8 @@ const $=id=>document.getElementById(id);
 (function(){const d=new Date(Date.now()-30*864e5);$("sow").value=d.toISOString().slice(0,10);})();
 function params(){
   return {p1:+$("p1").value,phint:+$("phint").value,p2:+$("p2").value,p2o:+$("p2o").value,
-          tbase:+$("tbase").value,topt:+$("topt").value,djti:+$("djti").value,pemrg:+$("pemrg").value};
+          tbase:+$("tbase").value,topt:+$("topt").value,djti:+$("djti").value,pemrg:+$("pemrg").value,
+          p5base0:+$("p5base0").value,kmpm:+$("kmpm").value,target:+$("target").value,kmethod:$("kmethod").value};
 }
 function setStatus(msg,isErr){const s=$("status");s.innerHTML=msg;s.className="status"+(isErr?" err":"");s.hidden=false;}
 
@@ -662,7 +774,7 @@ $("form").addEventListener("submit",async(ev)=>{
       if(!SEASONAL||SEASONAL.lat!==lat||SEASONAL.lon!==lon) SEASONAL=await fetchSeasonal(lat,lon);
       const fc=SEASONAL;
       const futMean=d=>{const cl=climSource(d),f=fc.mean[fmt(d)];
-        return {tmax:f?f.tmax:(cl?cl.tmax:0),tmin:f?f.tmin:(cl?cl.tmin:0),srad:cl?cl.srad:15};};
+        return {tmax:f?f.tmax:(cl?cl.tmax:0),tmin:f?f.tmin:(cl?cl.tmin:0),srad:cl?cl.srad:15,rh:cl?cl.rh:70};};
       centralSrc=campaign(futMean); central=simular(buildSeries(startRef,HORIZON,centralSrc,lat),p,warm);
       if(central.floD===null) throw new Error("El ciclo no alcanzó floración en el horizonte con estos parámetros.");
       let aS=0,aN=0;
@@ -671,7 +783,7 @@ $("form").addEventListener("submit",async(ev)=>{
       anom=aN?aS/aN:null;
       for(let m=0;m<fc.members.length;m++){const mem=fc.members[m];
         const fut=d=>{const cl=climSource(d),f=mem[fmt(d)];
-          return {tmax:f?f.tmax:(cl?cl.tmax:0),tmin:f?f.tmin:(cl?cl.tmin:0),srad:cl?cl.srad:15};};
+          return {tmax:f?f.tmax:(cl?cl.tmax:0),tmin:f?f.tmin:(cl?cl.tmin:0),srad:cl?cl.srad:15,rh:cl?cl.rh:70};};
         const r=simular(buildSeries(startRef,HORIZON,campaign(fut),lat),p,warm);
         band.push({floD:r.floD,TLNO:r.TLNO,gdd:r.gddFlo});}
       bandLabel="ensamble";
@@ -683,9 +795,9 @@ $("form").addEventListener("submit",async(ev)=>{
       setStatus('<span class="spin"></span>Corriendo el modelo con años análogos ENSO…');
       for(let Y=CACHE.meta.startY;Y<=CACHE.meta.endY-1;Y++){ if(ensoPhaseOf(Y)===phase) analogYears.push(Y); }
       if(!analogYears.length) throw new Error("No hay años "+PHN[phase]+" en el período descargado. Subí los años de climatología.");
-      const futMean=d=>{const key=String(mmdd(d)).padStart(4,"0");let tx=0,tn=0,sr=0,n=0;
-        for(const y of analogYears){const o=obs[`${y}${key}`]; if(o){tx+=o.tmax;tn+=o.tmin;sr+=o.srad;n++;}}
-        if(!n){const cl=climSource(d);return cl||{tmax:0,tmin:0,srad:15};} return {tmax:tx/n,tmin:tn/n,srad:sr/n};};
+      const futMean=d=>{const key=String(mmdd(d)).padStart(4,"0");let tx=0,tn=0,sr=0,rhs=0,n=0;
+        for(const y of analogYears){const o=obs[`${y}${key}`]; if(o){tx+=o.tmax;tn+=o.tmin;sr+=o.srad;rhs+=(o.rh==null?70:o.rh);n++;}}
+        if(!n){const cl=climSource(d);return cl||{tmax:0,tmin:0,srad:15,rh:70};} return {tmax:tx/n,tmin:tn/n,srad:sr/n,rh:rhs/n};};
       centralSrc=campaign(futMean); central=simular(buildSeries(startRef,HORIZON,centralSrc,lat),p,warm);
       if(central.floD===null) throw new Error("El ciclo no alcanzó floración en el horizonte con estos parámetros.");
       let aS=0,aN=0;
@@ -693,7 +805,7 @@ $("form").addEventListener("submit",async(ev)=>{
         if(cl){aS+=((fm.tmax+fm.tmin)/2)-((cl.tmax+cl.tmin)/2);aN++;}}
       anom=aN?aS/aN:null;
       for(const y of analogYears){
-        const fut=d=>{const o=obs[`${y}${String(mmdd(d)).padStart(4,"0")}`]; if(o)return o; const cl=climSource(d);return cl||{tmax:0,tmin:0,srad:15};};
+        const fut=d=>{const o=obs[`${y}${String(mmdd(d)).padStart(4,"0")}`]; if(o)return o; const cl=climSource(d);return cl||{tmax:0,tmin:0,srad:15,rh:70};};
         const r=simular(buildSeries(startRef,HORIZON,campaign(fut),lat),p,warm);
         band.push({year:y,floD:r.floD,TLNO:r.TLNO,gdd:r.gddFlo});}
       bandLabel="análogos";
@@ -704,6 +816,11 @@ $("form").addEventListener("submit",async(ev)=>{
     // cobertura observada del ciclo
     let cov=0; for(let i=0;i<=central.floD;i++){const k=fmt(new Date(startRef.getTime()+i*864e5)); if(obs[k]&&k<=lastObs) cov++;}
     const covPct=Math.round(100*cov/(central.floD+1));
+
+    // Llenado (R1->R6, base 0) y secado post-madurez (Chazarreta), sobre la misma serie central
+    const serC=buildSeries(startRef,HORIZON,centralSrc,lat);
+    serC.forEach(w=>{const kk=fmt(w.date); w.observed=!!(obs[kk]&&kk<=lastObs);});
+    const fd=fillingDrydown(serC, central.floD, warm, p);
 
     // KPIs
     const floDate=new Date(startRef.getTime()+central.floD*864e5);
@@ -722,6 +839,29 @@ $("form").addEventListener("submit",async(ev)=>{
     $("k_gdd").innerHTML=central.gddFlo+' <small>°Cd</small>';
     $("k_gdd_r").textContent=rng(gdds);
 
+    // KPIs de llenado y secado
+    if(fd.pmIdx!=null){
+      const pmDate=serC[fd.pmIdx].date;
+      $("k_pm").textContent=fechaStr(pmDate);
+      $("k_pm_r").textContent=`a ${fd.pmIdx} d de siembra`;
+      $("k_fill").innerHTML=fd.fillDays+' <small>días</small>';
+      $("k_fill_r").textContent=`R1→R6`;
+      if(fd.harvestIdx!=null){
+        $("k_harv").textContent=fechaStr(serC[fd.harvestIdx].date);
+        $("k_harv_r").textContent=`humedad ${p.target}%`;
+        $("k_dry").innerHTML=fd.dryDays+' <small>días</small>';
+        $("k_dry_r").textContent=`MF→cosecha`;
+      } else {
+        $("k_harv").textContent="no alcanz."; $("k_harv_r").textContent=`${p.target}% fuera de horizonte`;
+        $("k_dry").textContent="–"; $("k_dry_r").textContent="";
+      }
+      $("fill_cond").innerHTML=`Llenado: T media <b>${fd.fillT.toFixed(1)} °C</b> · Rad <b>${fd.fillSR.toFixed(1)} MJ/m²</b> · VPD <b>${fd.fillVPD.toFixed(2)} kPa</b>. Coef. de secado k = <b>${fd.k.toFixed(4)}</b> (${p.kmethod==='const'?'constante':'kpre, Chazarreta'}).`;
+    } else {
+      ["k_pm","k_harv","k_fill","k_dry"].forEach(id=>$(id).textContent="–");
+      ["k_pm_r","k_harv_r","k_fill_r","k_dry_r"].forEach(id=>$(id).textContent="");
+      $("fill_cond").textContent="El ciclo no alcanzó madurez fisiológica dentro del horizonte (revisá °Cd R1→R6 o parámetros).";
+    }
+
     // Traza de la campaña: observado (sólido) vs estimado (cortado)
     const campaignTrace=[]; let bIdx=null;
     for(let i=0;i<=central.floD;i++){
@@ -735,6 +875,7 @@ $("form").addEventListener("submit",async(ev)=>{
     // Gráficos
     chartLeaf($("chart_leaf"),central);
     chartCampaign($("chart_camp"),campaignTrace,bIdx,estLabel);
+    chartDrydown($("chart_dry"), fd.pmIdx!=null?fd.kmTrace:null, p.target);
     chartDist($("chart_dist"),band);
     let aD=doyOf(startRef), bD=doyOf(floDate); if(bD<aD) bD+=365; bD=Math.min(bD,365);
     chartClim($("chart_clim"),clim,lat,{a:aD,b:bD},overlay);
