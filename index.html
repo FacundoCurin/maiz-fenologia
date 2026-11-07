@@ -275,7 +275,8 @@
             <li><b>Pronóstico estacional (CFSv2):</b> pronóstico de Open-Meteo (modelo NOAA CFSv2, ~6 meses, 50 miembros). La dispersión del ensamble es el rango; la radiación se toma de la climatología (CFSv2 no la entrega).</li>
             <li><b>Análogo ENSO:</b> para los días futuros promedia solo los años históricos de la fase elegida (Niño/Niña/Neutral), clasificados por el ONI NDJ (NOAA CPC, umbral ±0,5 °C; tabla embebida, no en vivo). Cada año análogo da un punto del rango, y la línea cortada del gráfico de temperatura es el promedio de la fase.</li>
             <li><b>Llenado R1→R6:</b> tiempo térmico con <b>base 0 °C</b> desde floración hasta madurez fisiológica (°Cd calibrable). Resume T, radiación y VPD del período de llenado.</li>
-            <li><b>Secado post-madurez:</b> modelo de <b>Chazarreta et al. (2023)</b>: la humedad del grano decae hacia la humedad de equilibrio Me (Henderson) con el coeficiente kpre (función de radiación y VPD del llenado); la cosecha es a la humedad objetivo. No considera rasgos del híbrido (pericarpio, chalas, etc.).</li>
+            <li><b>Secado post-madurez:</b> modelo de <b>Chazarreta et al. (2023)</b>: la humedad del grano decae hacia la humedad de equilibrio Me (Henderson) con el coeficiente kpre (función de radiación y VPD del llenado); la cosecha es a la humedad objetivo. No considera rasgos del híbrido (pericarpio, chalas, etc.). El k se <b>acota al rango calibrado</b> por el paper (0,013–0,067) para no extrapolar.</li>
+            <li><b>El secado puede dar más rápido que en el campo:</b> la humedad relativa de NASA POWER es de la celda regional (~0,5°) y suele ser <b>más seca que un lote de maíz regado</b>, lo que sube el VPD y acelera el secado respecto a lo observado a campo. Conviene <b>calibrar k</b> con tu experiencia local (o usar el k constante).</li>
             <li><b>No</b> incluye estrés hídrico ni de nitrógeno, que en condiciones reales pueden adelantar o atrasar el desarrollo.</li>
           </ul>
           <p class="srcline" id="srcline"></p>
@@ -646,7 +647,7 @@ function fillingDrydown(ser, floD, warm, pr){
   const fillT=sT/cnt, fillSR=sSR/cnt, fillVPD=sVPD/cnt, fillDays=pmIdx-floD;
   // coeficiente de secado k
   let k = pr.kmethod==='const' ? 0.062 : (-0.03806 + 0.002838*fillSR + 0.023579*fillVPD); // kpre
-  k=Math.max(k,0.005);
+  k=Math.min(Math.max(k,0.013),0.067);   // acotado al rango calibrado (kobs) de Chazarreta (0,013–0,067)
   // secado diario desde madurez fisiológica
   const kmTrace=[{i:pmIdx,x:0,km:pr.kmpm,me:null,observed:ser[pmIdx].observed}];
   let KM=pr.kmpm; const meH=[]; let harvestIdx=null;
