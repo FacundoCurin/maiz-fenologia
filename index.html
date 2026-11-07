@@ -187,7 +187,7 @@
           <div class="field"><label for="p5base0">°Cd R1→R6 (base 0)</label><input type="number" id="p5base0" value="1300" step="25"></div>
           <div class="field"><label for="kmpm">Humedad a MF (%)</label><input type="number" id="kmpm" value="35" step="0.5"></div>
           <div class="field"><label for="target">Humedad cosecha (%)</label><input type="number" id="target" value="14.5" step="0.5"></div>
-          <div class="field"><label for="kmethod">Coef. secado k</label><select id="kmethod"><option value="kpre" selected>kpre (Chazarreta)</option><option value="const">constante 0,062</option></select></div>
+          <div class="field"><label for="kmethod">Coef. secado k</label><select id="kmethod"><option value="kpre" selected>kpre — clima del llenado (Chazarreta)</option><option value="const">constante 0,062</option></select></div>
         </div>
       </details>
 
@@ -855,7 +855,7 @@ $("form").addEventListener("submit",async(ev)=>{
         $("k_harv").textContent="no alcanz."; $("k_harv_r").textContent=`${p.target}% fuera de horizonte`;
         $("k_dry").textContent="–"; $("k_dry_r").textContent="";
       }
-      $("fill_cond").innerHTML=`Llenado: T media <b>${fd.fillT.toFixed(1)} °C</b> · Rad <b>${fd.fillSR.toFixed(1)} MJ/m²</b> · VPD <b>${fd.fillVPD.toFixed(2)} kPa</b>. Coef. de secado k = <b>${fd.k.toFixed(4)}</b> (${p.kmethod==='const'?'constante':'kpre, Chazarreta'}).`;
+      $("fill_cond").innerHTML=`Llenado: T media <b>${fd.fillT.toFixed(1)} °C</b> · Rad <b>${fd.fillSR.toFixed(1)} MJ/m²</b> · VPD <b>${fd.fillVPD.toFixed(2)} kPa</b>. Coef. de secado k = <b>${fd.k.toFixed(4)}</b> (${p.kmethod==='const'?'constante 0,062':'kpre: estimado con el clima del llenado, Chazarreta'}).`;
     } else {
       ["k_pm","k_harv","k_fill","k_dry"].forEach(id=>$(id).textContent="–");
       ["k_pm_r","k_harv_r","k_fill_r","k_dry_r"].forEach(id=>$(id).textContent="");
