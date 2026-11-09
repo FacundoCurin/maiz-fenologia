@@ -187,7 +187,8 @@
           <div class="field"><label for="p5base0">°Cd R1→R6 (base 0)</label><input type="number" id="p5base0" value="1300" step="25"></div>
           <div class="field"><label for="kmpm">Humedad a MF (%)</label><input type="number" id="kmpm" value="35" step="0.5"></div>
           <div class="field"><label for="target">Humedad cosecha (%)</label><input type="number" id="target" value="14.5" step="0.5"></div>
-          <div class="field"><label for="kmethod">Coef. secado k</label><select id="kmethod"><option value="kpre" selected>kpre — clima del llenado (Chazarreta)</option><option value="const">constante 0,062</option></select></div>
+          <div class="field"><label for="kmethod">Coef. secado k</label><select id="kmethod"><option value="kpre" selected>kpre — clima del llenado (Chazarreta)</option><option value="const">constante 0,062</option><option value="manual">manual (calibrar)</option></select></div>
+          <div class="field" id="kmanfield" hidden><label for="kman">k manual</label><input type="number" id="kman" value="0.045" step="0.005" min="0.005" max="0.12"></div>
         </div>
       </details>
 
@@ -646,8 +647,11 @@ function fillingDrydown(ser, floD, warm, pr){
     sT+=tm;sSR+=w.srad;sVPD+=vpdOf(tm,w.rh);cnt++;}
   const fillT=sT/cnt, fillSR=sSR/cnt, fillVPD=sVPD/cnt, fillDays=pmIdx-floD;
   // coeficiente de secado k
-  let k = pr.kmethod==='const' ? 0.062 : (-0.03806 + 0.002838*fillSR + 0.023579*fillVPD); // kpre
-  k=Math.min(Math.max(k,0.013),0.067);   // acotado al rango calibrado (kobs) de Chazarreta (0,013–0,067)
+  let k = pr.kmethod==='const' ? 0.062
+        : pr.kmethod==='manual' ? pr.kman
+        : (-0.03806 + 0.002838*fillSR + 0.023579*fillVPD);   // kpre
+  if(pr.kmethod==='manual') k=Math.max(k,0.002);             // manual: lo que vos pongas (sin acotar al paper)
+  else k=Math.min(Math.max(k,0.013),0.067);                 // kpre/const: acotado al rango calibrado de Chazarreta
   // secado diario desde madurez fisiológica
   const kmTrace=[{i:pmIdx,x:0,km:pr.kmpm,me:null,observed:ser[pmIdx].observed}];
   let KM=pr.kmpm; const meH=[]; let harvestIdx=null;
@@ -719,12 +723,13 @@ const $=id=>document.getElementById(id);
 function params(){
   return {p1:+$("p1").value,phint:+$("phint").value,p2:+$("p2").value,p2o:+$("p2o").value,
           tbase:+$("tbase").value,topt:+$("topt").value,djti:+$("djti").value,pemrg:+$("pemrg").value,
-          p5base0:+$("p5base0").value,kmpm:+$("kmpm").value,target:+$("target").value,kmethod:$("kmethod").value};
+          p5base0:+$("p5base0").value,kmpm:+$("kmpm").value,target:+$("target").value,kmethod:$("kmethod").value,kman:+$("kman").value};
 }
 function setStatus(msg,isErr){const s=$("status");s.innerHTML=msg;s.className="status"+(isErr?" err":"");s.hidden=false;}
 
 $("warm").addEventListener("input",()=>{const v=+$("warm").value;$("warmval").textContent=(v>0?"+":"")+v.toFixed(1)+" °C";});
 $("mad").addEventListener("change",()=>{const v=$("mad").value;if(v!=="custom")$("p1").value=v;});
+$("kmethod").addEventListener("change",()=>{$("kmanfield").hidden = $("kmethod").value!=='manual';});
 $("mode").addEventListener("change",()=>{
   const m=$("mode").value;
   $("ensofield").hidden = m!=="enso";
@@ -856,7 +861,7 @@ $("form").addEventListener("submit",async(ev)=>{
         $("k_harv").textContent="no alcanz."; $("k_harv_r").textContent=`${p.target}% fuera de horizonte`;
         $("k_dry").textContent="–"; $("k_dry_r").textContent="";
       }
-      $("fill_cond").innerHTML=`Llenado: T media <b>${fd.fillT.toFixed(1)} °C</b> · Rad <b>${fd.fillSR.toFixed(1)} MJ/m²</b> · VPD <b>${fd.fillVPD.toFixed(2)} kPa</b>. Coef. de secado k = <b>${fd.k.toFixed(4)}</b> (${p.kmethod==='const'?'constante 0,062':'kpre: estimado con el clima del llenado, Chazarreta'}).`;
+      $("fill_cond").innerHTML=`Llenado: T media <b>${fd.fillT.toFixed(1)} °C</b> · Rad <b>${fd.fillSR.toFixed(1)} MJ/m²</b> · VPD <b>${fd.fillVPD.toFixed(2)} kPa</b>. Coef. de secado k = <b>${fd.k.toFixed(4)}</b> (${p.kmethod==='const'?'constante 0,062':p.kmethod==='manual'?'manual, calibrado por vos':'kpre: estimado con el clima del llenado, Chazarreta'}).`;
     } else {
       ["k_pm","k_harv","k_fill","k_dry"].forEach(id=>$(id).textContent="–");
       ["k_pm_r","k_harv_r","k_fill_r","k_dry_r"].forEach(id=>$(id).textContent="");
